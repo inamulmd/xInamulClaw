@@ -1,0 +1,34 @@
+{
+  "name": "x.opneclaw",
+  "version": "1.0.0",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "dependencies": {
+    "@clack/core": "^1.5.1",
+    "@clack/prompts": "^1.8.1",
+    "@mendable/firecrawl-js": "^4.41.0",
+    "@openrouter/ai-sdk-provider": "^3.1.0",
+    "ai": "^7.0.116",
+    "chalk": "^6.0.0",
+    "commander": "^15.0.0",
+    "diff": "^9.0.0",
+    "dotenv": "^18.0.4",
+    "figlet": "^1.11.4",
+    "marked": "^15.0.12",
+    "marked-terminal": "^7.3.0",
+    "telegraf": "^4.16.3"
+  },
+  "devDependencies": {
+    "@types/marked-terminal": "^6.1.1",
+    "@types/node": "^26.6.3",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  },
+  "type": "module"
+}
