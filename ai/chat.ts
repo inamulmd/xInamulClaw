@@ -3,6 +3,8 @@ import { openrouter } from "./client.js";
 import { calculator } from "../tools/calculator.js";
 import { z } from "zod";
 import { readProjectFile } from "../tools/read-file.js";
+import { listProjectFiles } from "../tools/list-files.js";
+import { writeProjectFile } from "../tools/write-file.js";
 
 export type Message = {
   role: "user" | "assistant";
@@ -44,7 +46,7 @@ Rules:
           return calculator(expression);
         },
       }),
-      readFile: tool({
+    readFile: tool({
         description:
           "Read a file from the current project so you can inspect its contents.",
 
@@ -58,6 +60,43 @@ Rules:
           return readProjectFile(filePath);
         },
       }),
+
+    listFiles: tool({
+      description:
+        "List all files in the current project so you can understand its structure.",
+
+      inputSchema: z.object({
+        directory: z
+          .string()
+          .optional()
+          .describe("Directory to scan. Use '.' for the current project."),
+      }),
+
+      execute: async ({ directory }) => {
+        return listProjectFiles(directory ?? ".");
+      },
+    }),
+    
+    writeFile: tool({
+      description:
+        "Write content to a file in the current project. Use this only when the user explicitly asks you to create or modify a file.",
+
+      inputSchema: z.object({
+        filePath: z
+          .string()
+          .describe("Path of the file to write, such as example.txt"),
+
+        content: z
+          .string()
+          .describe("The complete content that should be written to the file"),
+      }),
+
+      execute: async ({ filePath, content }) => {
+        await writeProjectFile(filePath, content);
+
+        return `Successfully wrote file: ${filePath}`;
+      },
+    }),
 
     },
   });
