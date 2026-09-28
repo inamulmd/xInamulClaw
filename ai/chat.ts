@@ -5,6 +5,8 @@ import { z } from "zod";
 import { readProjectFile } from "../tools/read-file.js";
 import { listProjectFiles } from "../tools/list-files.js";
 import { writeProjectFile } from "../tools/write-file.js";
+import { runProjectCommand } from "../tools/run-command.js";
+
 
 export type Message = {
   role: "user" | "assistant";
@@ -97,6 +99,21 @@ Rules:
         return `Successfully wrote file: ${filePath}`;
       },
     }),
+
+     runCommand: tool({
+        description:
+          "Run a command in the current project directory. Use this when the user explicitly asks you to run a command or when running a project command is necessary to complete the task.",
+
+        inputSchema: z.object({
+          command: z
+            .string()
+            .describe("The command to execute, such as npm --version or npm run build"),
+        }),
+
+        execute: async ({ command }) => {
+          return runProjectCommand(command);
+        },
+      }),  
 
     },
   });
