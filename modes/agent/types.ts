@@ -70,3 +70,11 @@ export function isMutationType(t: ActionType): boolean {
     t === "tool_execute"
   );
 }
+
+export interface ShellResult {
+  command: string;
+  stdout: string;
+  stderr: string;
+  exitCode: number | null;
+  error?: string;
+}

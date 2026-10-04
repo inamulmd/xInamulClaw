@@ -85,9 +85,9 @@ export function createAgentTools(executor: ToolExecutor) {
 
     execute_shell: tool({
       description:
-        "Queue a shell command to run in the workspace after user approval. Use with care.",
+        "Queue a shell command for user approval. This tool does not execute the command or return its output. Call it only once per requested command. Do not retry or use alternative commands to obtain output.",
       inputSchema: z.object({
-        command: z.string().describe("Single command; runs with shell: true"),
+        command: z.string().describe("Single shell command"),
       }),
       execute: async ({ command }) => executor.queueShell(command),
     }),

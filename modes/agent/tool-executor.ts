@@ -374,6 +374,7 @@ export class ToolExecutor {
     )) {
       try {
         fs.mkdirSync(this.resolveSafe(a.path), { recursive: true });
+         this.tracker.updateStatus(a.id, "executed");
       } catch (e) {
         errors.push(String(e));
       }
@@ -389,10 +390,9 @@ export class ToolExecutor {
       )
       .sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
 
-    const lastByPath = new Map<string, ActionLog>();
-    for (const a of fileOps) lastByPath.set(this.norm(a.path), a);
 
-    for (const [p, a] of lastByPath) {
+    for (const a of fileOps) {
+      const p = this.norm(a.path);
       try {
         if (a.type === "file_delete")
           fs.rmSync(this.resolveSafe(p), { force: true });
@@ -401,24 +401,35 @@ export class ToolExecutor {
           fs.mkdirSync(path.dirname(target), { recursive: true });
           fs.writeFileSync(target, a.details.after ?? "", "utf8");
         }
+         this.tracker.updateStatus(a.id, "executed");
       } catch (e) {
         errors.push(String(e));
       }
     }
 
     for (const a of all.filter(
-      (x) => x.type === "tool_execute" && x.status === "approved",
-    )) {
+      (x) => x.type === "tool_execute" && x.status === "approved",)) {
       const cmd = a.details.command;
       if (!cmd) continue;
-      const r = spawnSync(cmd, {
-        shell: true,
-        cwd: this.config.codebasePath,
-        encoding: "utf8",
-        maxBuffer: 16 * 1024 * 1024,
-      });
-      if (r.status && r.status !== 0)
-        errors.push(`shell exit ${r.status}: ${cmd}`);
+
+      try {
+        const r = spawnSync(cmd, {
+          shell: true,
+          cwd: this.config.codebasePath,
+          encoding: "utf8",
+          maxBuffer: 16 * 1024 * 1024,
+        });
+
+        if (r.error) {
+          errors.push(String(r.error));
+        } else if (r.status !== 0) {
+          errors.push(`shell exit ${r.status}: ${cmd}`);
+        } else {
+          this.tracker.updateStatus(a.id, "executed");
+        }
+      } catch (e) {
+        errors.push(String(e));
+      }
     }
 
     return { errors };

@@ -13,3 +13,33 @@ import { defaultAgentConfig } from "./types.js";
 // ToolExecutor: Executes or stages operations.
 // defaultAgentConfig: Provides the default workspace and permissions.
 
+
+export async function runAgent(prompt: string) {
+  const tracker = new ActionTracker();
+  const config = defaultAgentConfig();
+  const executor = new ToolExecutor(tracker, config);
+  const tools = createAgentTools(executor);
+
+  const result = streamText({
+    model: openrouter("openrouter/free"),
+    system: `
+You are xInamulClaw, an AI coding agent.
+
+You can inspect a project, understand its structure,
+and propose code changes using the available tools.
+
+Rules:
+- Understand the user's request before taking action.
+- Read relevant files before modifying them.
+- Use the available tools when necessary.
+- File changes are staged and require user approval.
+- Never claim a change has been applied unless it actually has.
+- Explain your work clearly.
+`,
+    prompt,
+    tools,
+    stopWhen: stepCountIs(10),
+  });
+
+  return { result, tracker, executor };
+}
