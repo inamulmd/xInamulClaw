@@ -10,6 +10,7 @@ export async function runProjectCommand(
     const { stdout, stderr } = await execAsync(command, {
       cwd: process.cwd(),
       maxBuffer: 1024 * 1024,
+      timeout: 30_000,
     });
 
     if (stderr) {

@@ -1,7 +1,8 @@
 import { writeFile } from "node:fs/promises";
 import path from "node:path";
+import { PROJECT_ROOT } from "../config/project.js";
 
-const PROJECT_ROOT = path.resolve(".");
+
 
 export async function writeProjectFile(
   filePath: string,

@@ -1,8 +1,10 @@
 import { readdir } from "node:fs/promises";
 import path from "node:path";
+import { PROJECT_ROOT } from "../config/project.js";
+
 
 export async function listProjectFiles(
-  directory = "."
+  directory = PROJECT_ROOT
 ): Promise<string[]> {
   const entries = await readdir(directory, {
     withFileTypes: true,
