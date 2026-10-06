@@ -1,4 +1,5 @@
-import { streamText, stepCountIs } from "ai";
+// import { streamText, stepCountIs } from "ai";
+import { streamText, stepCountIs, type ModelMessage } from "ai";
 import { openrouter } from "../../ai/client.js";
 import { createAgentTools } from "./agent-tools.js";
 import { ActionTracker } from "./action-tracker.js";
@@ -16,6 +17,13 @@ import { defaultAgentConfig } from "./types.js";
 
 export async function runAgent(prompt: string) {
   const tracker = new ActionTracker();
+
+   const messages: ModelMessage[] = [
+    {
+      role: "user",
+      content: prompt,
+    },
+  ];
   const config = defaultAgentConfig();
   const executor = new ToolExecutor(tracker, config);
   const tools = createAgentTools(executor);
@@ -36,10 +44,39 @@ Rules:
 - Never claim a change has been applied unless it actually has.
 - Explain your work clearly.
 `,
-    prompt,
+    messages,
     tools,
     stopWhen: stepCountIs(10),
   });
 
-  return { result, tracker, executor };
+  return { result, tracker, executor,messages};
+}
+
+
+export async function continueAgent(
+      messages: ModelMessage[],
+      executor: ToolExecutor,
+    ) {
+      const tools = createAgentTools(executor);
+
+      return streamText({
+        model: openrouter("openrouter/free"),
+        system: `
+    You are xInamulClaw, an AI coding agent.
+
+    You can inspect a project, understand its structure,
+    and propose code changes using the available tools.
+
+    Rules:
+    - Understand the user's request before taking action.
+    - Read relevant files before modifying them.
+    - Use the available tools when necessary.
+    - File changes are staged and require user approval.
+    - Never claim a change has been applied unless it actually has.
+    - Explain your work clearly.
+    `,
+        messages,
+        tools,
+        stopWhen: stepCountIs(10),
+      });
 }

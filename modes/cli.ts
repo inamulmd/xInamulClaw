@@ -1,6 +1,9 @@
 import { confirm, intro, isCancel, outro, text } from "@clack/prompts";
+import type { ModelMessage, ToolModelMessage } from "ai";
 import { askAI, type Message } from "../ai/chat.js";
-import { runAgent } from "./agent/agent.js";
+import { runAgent,continueAgent  } from "./agent/agent.js";
+
+
 
 export async function startCLI() {
   intro("xInamulClaw CLI");
@@ -17,7 +20,8 @@ export async function startCLI() {
     });
 
     if (typeof prompt === "string") {
-     const { result, tracker, executor } = await runAgent(prompt);
+      const { result, tracker, executor, messages } = await runAgent(prompt);/********/
+    
 
       for await (const chunk of result.textStream) {
         process.stdout.write(chunk);
@@ -55,6 +59,91 @@ export async function startCLI() {
         } else {
           for (const action of pendingActions) {
             tracker.updateStatus(action.id, "approved", true);
+          }
+
+          for (const action of pendingActions) {
+            if (action.type === "tool_execute") {
+              try {
+               const shellResult = executor.executeApprovedShell(action.id);
+
+                  // messages.push({
+                  //   role: "user",
+                  //   content: `The approved shell command was executed.
+
+                  // Command: ${shellResult.command}
+                  // Exit code: ${shellResult.exitCode}
+                  // stdout:
+                  // ${shellResult.stdout}
+
+                  // stderr:
+                  // ${shellResult.stderr}`,
+                  // });
+             /////***********////////** */ */
+                const responseMessages = await result.responseMessages;
+
+              ;
+
+                  const assistantMessage = responseMessages.find(
+                    (message) => message.role === "assistant",
+                  );
+
+                  if (assistantMessage) {
+                    messages.push(assistantMessage);
+                  }
+
+                const toolResultMessage: ToolModelMessage = {
+                    role: "tool",
+                    content: [
+                      {
+                        type: "tool-result",
+                        toolCallId: shellResult.toolCallId,
+                        toolName: "execute_shell",
+                        output: {
+                          type: "json",
+                          value: {
+                            command: shellResult.command,
+                            stdout: shellResult.stdout,
+                            stderr: shellResult.stderr,
+                            exitCode: shellResult.exitCode,
+                            ...(shellResult.error && {
+                              error: shellResult.error,
+                            }),
+                            toolCallId: shellResult.toolCallId,
+                          },
+                        },
+                      },
+                    ],
+                  };
+
+                  messages.push(toolResultMessage);
+
+                  // console.log("\nDEBUG MESSAGES:");
+                  // console.dir(messages, { depth: null }); 
+
+
+
+                  /******** *********/
+                  const continuation = await continueAgent(messages, executor);
+                  console.log("\nCONTINUATION STARTED");
+
+
+                 for await (const chunk of continuation.textStream) {
+                    process.stdout.write(chunk);
+                  }
+
+                  console.log("\nShell result:");
+                  console.log("Command:", shellResult.command);
+                  console.log("Exit code:", shellResult.exitCode);
+                  console.log("Output:", shellResult.stdout);
+                  console.log("Error:", shellResult.stderr);
+
+                if (shellResult.error) {
+                  console.error("Execution error:", shellResult.error);
+                }
+              } catch (error) {
+                console.error("Shell execution failed:", error);
+              }
+            }
           }
 
           const { errors } = executor.applyApprovedFromTracker();

@@ -24,6 +24,7 @@ export interface ActionLog {
     toolResult?: string;
     error?: string;
     command?: string;
+    toolCallId?: string;
   };
   status: ActionStatus;
   userApproved?: boolean;

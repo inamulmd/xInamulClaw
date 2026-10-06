@@ -89,7 +89,8 @@ export function createAgentTools(executor: ToolExecutor) {
       inputSchema: z.object({
         command: z.string().describe("Single shell command"),
       }),
-      execute: async ({ command }) => executor.queueShell(command),
+      execute: async ({ command }, options) =>
+       executor.queueShell(command, options.toolCallId),
     }),
 
     list_skills: tool({

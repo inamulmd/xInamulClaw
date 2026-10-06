@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { homedir } from "node:os";
 import { spawnSync } from "node:child_process";
+import type { ShellResult } from "./types.js";
 
 
 import type { AgentConfig, ActionLog } from "./types.js";
@@ -300,17 +301,29 @@ export class ToolExecutor {
     return summary;
   }
 
-  queueShell(command: string): string {
-    if (!this.config.tools.allowShellExecution)
+ queueShell(command: string, toolCallId: string): string {
+    if (!this.config.tools.allowShellExecution) {
       throw new Error("Shell execution disabled");
-    this.tracker.log({
+    }
+
+    const action = this.tracker.log({
       type: "tool_execute",
       path: "shell",
-      details: { command, toolName: "execute_shell" },
+      details: {
+        command,
+        toolName: "execute_shell",
+        toolCallId,
+      },
       status: "pending",
     });
-    return `Shell queued: ${command}`;
-  }
+
+    return JSON.stringify({
+      status: "pending_approval",
+      actionId: action.id,
+      command,
+      message: "Command queued. Waiting for user approval.",
+    });
+}
   skillRoots(): string[] {
     const extra =
       process.env.SKILLS_DIRS?.split(/[;]/)
@@ -365,6 +378,51 @@ export class ToolExecutor {
     return text;
   }
 
+
+ executeApprovedShell(actionId: string): ShellResult & { toolCallId: string } {
+  const action = this.tracker
+    .getActions()
+    .find((item) => item.id === actionId);
+
+  if (!action || action.type !== "tool_execute") {
+    throw new Error("Shell action not found");
+  }
+
+  if (action.status !== "approved") {
+    throw new Error("Shell action is not approved");
+  }
+
+  const command = action.details.command;
+
+  if (!command) {
+    throw new Error("Shell command is missing");
+  }
+
+  const result = spawnSync(command, {
+    shell: true,
+    cwd: this.config.codebasePath,
+    encoding: "utf8",
+    maxBuffer: 16 * 1024 * 1024,
+  });
+
+  const shellResult: ShellResult = {
+    command,
+    stdout: result.stdout ?? "",
+    stderr: result.stderr ?? "",
+    exitCode: result.status,
+    ...(result.error && { error: result.error.message }),
+  };
+
+  if (!result.error && result.status === 0) {
+    this.tracker.updateStatus(actionId, "executed");
+  }
+
+ return {
+    ...shellResult,
+    toolCallId: action.details.toolCallId!,
+  };
+}
+
   applyApprovedFromTracker(): { errors: string[] } {
     const errors: string[] = [];
     const all = [...this.tracker.getActions()];
@@ -407,30 +465,30 @@ export class ToolExecutor {
       }
     }
 
-    for (const a of all.filter(
-      (x) => x.type === "tool_execute" && x.status === "approved",)) {
-      const cmd = a.details.command;
-      if (!cmd) continue;
+    // for (const a of all.filter(
+    //   (x) => x.type === "tool_execute" && x.status === "approved",)) {
+    //   const cmd = a.details.command;
+    //   if (!cmd) continue;
 
-      try {
-        const r = spawnSync(cmd, {
-          shell: true,
-          cwd: this.config.codebasePath,
-          encoding: "utf8",
-          maxBuffer: 16 * 1024 * 1024,
-        });
+    //   try {
+    //     const r = spawnSync(cmd, {
+    //       shell: true,
+    //       cwd: this.config.codebasePath,
+    //       encoding: "utf8",
+    //       maxBuffer: 16 * 1024 * 1024,
+    //     });
 
-        if (r.error) {
-          errors.push(String(r.error));
-        } else if (r.status !== 0) {
-          errors.push(`shell exit ${r.status}: ${cmd}`);
-        } else {
-          this.tracker.updateStatus(a.id, "executed");
-        }
-      } catch (e) {
-        errors.push(String(e));
-      }
-    }
+    //     if (r.error) {
+    //       errors.push(String(r.error));
+    //     } else if (r.status !== 0) {
+    //       errors.push(`shell exit ${r.status}: ${cmd}`);
+    //     } else {
+    //       this.tracker.updateStatus(a.id, "executed");
+    //     }
+    //   } catch (e) {
+    //     errors.push(String(e));
+    //   }
+    // }
 
     return { errors };
   }
