@@ -82,7 +82,7 @@ export class ToolExecutor {
     return fs.readFileSync(abs, "utf8");
   }
 
-  readFile(rel: string): string {
+  readFile(rel: string, toolCallId: string): string {
     this.assertNotExcluded(rel, "read_file");
     const abs = this.resolveSafe(rel);
     if (!fs.existsSync(abs) || !fs.statSync(abs).isFile()) {
@@ -96,13 +96,13 @@ export class ToolExecutor {
     this.tracker.log({
       type: "code_analysis",
       path: this.norm(rel),
-      details: { after: text, toolName: "read_file" },
+      details: { after: text, toolName: "read_file",toolCallId, },
       status: "executed",
     });
     return text;
   }
 
-  createFile(rel: string, content: string): string {
+  createFile(rel: string, content: string,toolCallId: string,): string {
     if (!this.config.tools.allowFileCreation)
       throw new Error("File creation disabled");
     this.assertNotExcluded(rel, "create_file");
@@ -116,13 +116,13 @@ export class ToolExecutor {
     this.tracker.log({
       type: "file_create",
       path: key,
-      details: { after: content },
+      details: { after: content, toolCallId, },
       status: "pending",
     });
     return `Staged new file: ${key}`;
   }
 
-  modifyFile(rel: string, content: string): string {
+ modifyFile(rel: string,content: string,toolCallId: string,): string {
     if (!this.config.tools.allowFileModification)
       throw new Error("File modification disabled");
     this.assertNotExcluded(rel, "modify_file");
@@ -134,7 +134,11 @@ export class ToolExecutor {
     this.tracker.log({
       type: "file_modify",
       path: key,
-      details: { before, after: content },
+     details: {
+          before,
+          after: content,
+          toolCallId,
+        },
       status: "pending",
     });
     return `Staged update: ${key}`;
@@ -432,6 +436,7 @@ export class ToolExecutor {
     )) {
       try {
         fs.mkdirSync(this.resolveSafe(a.path), { recursive: true });
+        console.log("APPROVED ACTION:", a);
          this.tracker.updateStatus(a.id, "executed");
       } catch (e) {
         errors.push(String(e));

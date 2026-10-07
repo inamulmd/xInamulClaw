@@ -61,35 +61,23 @@ export async function startCLI() {
             tracker.updateStatus(action.id, "approved", true);
           }
 
-          for (const action of pendingActions) {
+
+          const responseMessages = await result.responseMessages;
+
+
+            for (const message of responseMessages) {
+              if (message.role === "assistant") {
+                messages.push(message);
+              }
+            }
+
+
+          for (const action of tracker.getActions()) {
             if (action.type === "tool_execute") {
               try {
                const shellResult = executor.executeApprovedShell(action.id);
 
-                  // messages.push({
-                  //   role: "user",
-                  //   content: `The approved shell command was executed.
-
-                  // Command: ${shellResult.command}
-                  // Exit code: ${shellResult.exitCode}
-                  // stdout:
-                  // ${shellResult.stdout}
-
-                  // stderr:
-                  // ${shellResult.stderr}`,
-                  // });
-             /////***********////////** */ */
-                const responseMessages = await result.responseMessages;
-
-              ;
-
-                  const assistantMessage = responseMessages.find(
-                    (message) => message.role === "assistant",
-                  );
-
-                  if (assistantMessage) {
-                    messages.push(assistantMessage);
-                  }
+            
 
                 const toolResultMessage: ToolModelMessage = {
                     role: "tool",
@@ -117,19 +105,6 @@ export async function startCLI() {
 
                   messages.push(toolResultMessage);
 
-                  // console.log("\nDEBUG MESSAGES:");
-                  // console.dir(messages, { depth: null }); 
-
-
-
-                  /******** *********/
-                  const continuation = await continueAgent(messages, executor);
-                  console.log("\nCONTINUATION STARTED");
-
-
-                 for await (const chunk of continuation.textStream) {
-                    process.stdout.write(chunk);
-                  }
 
                   console.log("\nShell result:");
                   console.log("Command:", shellResult.command);
@@ -144,7 +119,75 @@ export async function startCLI() {
                 console.error("Shell execution failed:", error);
               }
             }
+
+            else if (action.type === "file_create") {
+              const toolResultMessage: ToolModelMessage = {
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolCallId: action.details.toolCallId!,
+                    toolName: "create_file",
+                    output: {
+                      type: "json",
+                      value: {
+                        success: true,
+                        path: action.path,
+                        message: `File created successfully: ${action.path}`,
+                      },
+                    },
+                  },
+                ],
+              };
+
+              messages.push(toolResultMessage);
+            }
+
+            else if (action.type === "file_modify") {
+              const toolResultMessage: ToolModelMessage = {
+              role: "tool",
+              content: [
+                {
+                  type: "tool-result",
+                  toolCallId: action.details.toolCallId!,
+                  toolName: "modify_file",
+                  output: {
+                    type: "json",
+                    value: {
+                      success: true,
+                      path: action.path,
+                      message: `File modified successfully: ${action.path}`,
+                    },
+                  },
+                },
+              ],
+            };
+
+              console.log("MODIFY TOOL CALL ID:", action.details.toolCallId);
+
+              messages.push(toolResultMessage);
+            }
+
+            else if (action.type === "code_analysis" && action.details.toolName === "read_file") {
+                const toolResultMessage: ToolModelMessage = {
+                  role: "tool",
+                  content: [
+                    {
+                      type: "tool-result",
+                      toolCallId: action.details.toolCallId!,
+                      toolName: "read_file",
+                      output: {
+                        type: "text",
+                        value: action.details.after ?? "",
+                      },
+                    },
+                  ],
+                };
+
+                messages.push(toolResultMessage);
+              }
           }
+
 
           const { errors } = executor.applyApprovedFromTracker();
 
@@ -153,6 +196,18 @@ export async function startCLI() {
           } else {
             console.log("Approved actions applied successfully.");
           }
+          const continuation = await continueAgent(messages, executor);
+
+          console.log("\nCONTINUATION STARTED");
+
+          for await (const chunk of continuation.textStream) {
+            process.stdout.write(chunk);
+          }
+
+          console.log("\n");
+
+
+          
         }
       } else {
         console.log("No pending actions.");

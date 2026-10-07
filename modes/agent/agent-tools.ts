@@ -10,7 +10,8 @@ export function createAgentTools(executor: ToolExecutor) {
       inputSchema: z.object({
         path: z.string().describe("Relative file path"),
       }),
-      execute: async ({ path: p }) => executor.readFile(p),
+      execute: async ({ path: p }, options) =>
+       executor.readFile(p, options.toolCallId),
     }),
 
     create_file: tool({
@@ -20,7 +21,8 @@ export function createAgentTools(executor: ToolExecutor) {
         path: z.string(),
         content: z.string(),
       }),
-      execute: async ({ path: p, content }) => executor.createFile(p, content),
+     execute: async ({ path: p, content }, options) =>
+      executor.createFile(p, content, options.toolCallId),
     }),
 
     modify_file: tool({
@@ -30,7 +32,8 @@ export function createAgentTools(executor: ToolExecutor) {
         path: z.string(),
         content: z.string().describe("Complete new file contents"),
       }),
-      execute: async ({ path: p, content }) => executor.modifyFile(p, content),
+     execute: async ({ path: p, content }, options) =>
+      executor.modifyFile(p, content, options.toolCallId),
     }),
 
     delete_file: tool({
