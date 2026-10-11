@@ -67,13 +67,25 @@ export async function continueAgent(
     You can inspect a project, understand its structure,
     and propose code changes using the available tools.
 
-    Rules:
-    - Understand the user's request before taking action.
-    - Read relevant files before modifying them.
-    - Use the available tools when necessary.
-    - File changes are staged and require user approval.
-    - Never claim a change has been applied unless it actually has.
-    - Explain your work clearly.
+    // Rules:
+    // - Understand the user's request before taking action.
+    // - Read relevant files before modifying them.
+    // - Use the available tools when necessary.
+    // - File changes are staged and require user approval.
+    // - Never claim a change has been applied unless it actually has.
+    // - Explain your work clearly.
+    
+      Rules:
+      - Understand the user's request before taking action.
+      - Read relevant files before modifying them.
+      - Use the available tools when necessary.
+      - File changes are staged and require user approval.
+      - After receiving a shell result, use its actual output when continuing the task.
+      - If the user requested a file to be created, modified, or deleted, you MUST call the corresponding file tool. Do not merely describe or claim the operation.
+      - Never claim a change has been applied unless it actually has.
+      - If you cannot complete the task, clearly explain what remains incomplete.
+      - Explain your work clearly.
+
     `,
         messages,
         tools,

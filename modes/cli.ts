@@ -1,7 +1,40 @@
 import { confirm, intro, isCancel, outro, text } from "@clack/prompts";
-import type { ModelMessage, ToolModelMessage } from "ai";
+import type { ModelMessage, ToolModelMessage,JSONValue } from "ai";
 import { askAI, type Message } from "../ai/chat.js";
 import { runAgent,continueAgent  } from "./agent/agent.js";
+
+
+
+
+
+
+function createToolResultMessage(
+    toolCallId: string,
+    toolName: string,
+    output: string | JSONValue,
+    outputType: "text" | "json",
+  ): ToolModelMessage {
+    return {
+      role: "tool",
+      content: [
+        {
+          type: "tool-result",
+          toolCallId,
+          toolName,
+          output:
+            outputType === "text"
+              ? {
+                  type: "text",
+                  value: String(output),
+                }
+              : {
+                  type: "json",
+                  value: output,
+                },
+        },
+      ],
+    };
+}
 
 
 
@@ -64,15 +97,22 @@ export async function startCLI() {
 
           const responseMessages = await result.responseMessages;
 
+           
+
 
             for (const message of responseMessages) {
               if (message.role === "assistant") {
                 messages.push(message);
               }
             }
-
+           
+          
 
           for (const action of tracker.getActions()) {
+
+             if (action.type === "tool_execute" && action.status !== "approved") {
+             continue;
+             }
             if (action.type === "tool_execute") {
               try {
                const shellResult = executor.executeApprovedShell(action.id);
@@ -168,14 +208,14 @@ export async function startCLI() {
               messages.push(toolResultMessage);
             }
 
-            else if (action.type === "code_analysis" && action.details.toolName === "read_file") {
+            else if (action.type === "code_analysis" && (action.details.toolName === "read_file" || action.details.toolName === "list_files")) {
                 const toolResultMessage: ToolModelMessage = {
                   role: "tool",
                   content: [
                     {
                       type: "tool-result",
                       toolCallId: action.details.toolCallId!,
-                      toolName: "read_file",
+                      toolName: action.details.toolName!,
                       output: {
                         type: "text",
                         value: action.details.after ?? "",
@@ -186,6 +226,53 @@ export async function startCLI() {
 
                 messages.push(toolResultMessage);
               }
+
+              else if (action.type === "file_delete") {
+                const toolResultMessage: ToolModelMessage = {
+                  role: "tool",
+                  content: [
+                    {
+                      type: "tool-result",
+                      toolCallId: action.details.toolCallId!,
+                      toolName: "delete_file",
+                      output: {
+                        type: "json",
+                        value: {
+                          success: true,
+                          path: action.path,
+                          message: `File deleted successfully: ${action.path}`,
+                        },
+                      },
+                    },
+                  ],
+                };
+
+                messages.push(toolResultMessage);
+              }
+
+
+              else if (action.type === "folder_create") {
+              const toolResultMessage: ToolModelMessage = {
+                role: "tool",
+                content: [
+                  {
+                    type: "tool-result",
+                    toolCallId: action.details.toolCallId!,
+                    toolName: "create_folder",
+                    output: {
+                      type: "json",
+                      value: {
+                        success: true,
+                        path: action.path,
+                        message: `Folder created successfully: ${action.path}`,
+                      },
+                    },
+                  },
+                ],
+              };
+
+              messages.push(toolResultMessage);
+            }
           }
 
 
@@ -196,7 +283,7 @@ export async function startCLI() {
           } else {
             console.log("Approved actions applied successfully.");
           }
-          const continuation = await continueAgent(messages, executor);
+         const continuation = await continueAgent(messages, executor);
 
           console.log("\nCONTINUATION STARTED");
 
@@ -206,6 +293,54 @@ export async function startCLI() {
 
           console.log("\n");
 
+          const continuationMessages = await continuation.responseMessages;
+
+          for (const message of continuationMessages) {
+            if (message.role === "assistant") {
+              messages.push(message);
+            }
+          }
+
+          const newPendingActions = tracker.getPendingMutations();
+
+            if (newPendingActions.length > 0) {
+              console.log("\nNew pending actions:");
+
+              for (const action of newPendingActions) {
+                console.log(`- Type: ${action.type}`);
+                console.log(`  Path: ${action.path}`);
+
+                if (action.details.command) {
+                  console.log(`  Command: ${action.details.command}`);
+                }
+              }
+
+              const approveNewActions = await confirm({
+                message: "Do you approve these new changes?",
+              });
+
+              if (isCancel(approveNewActions) || !approveNewActions) {
+                for (const action of newPendingActions) {
+                  tracker.updateStatus(action.id, "rejected", false);
+                }
+
+                console.log("New changes rejected.");
+              } else {
+                for (const action of newPendingActions) {
+                  tracker.updateStatus(action.id, "approved", true);
+                }
+
+                const { errors: newErrors } = executor.applyApprovedFromTracker();
+
+                if (newErrors.length > 0) {
+                  console.error("Some new actions failed:", newErrors);
+                } else {
+                  console.log("New approved actions applied successfully.");
+                }
+              }
+            } else {
+              console.log("\nNo new pending actions.");
+            }
 
           
         }

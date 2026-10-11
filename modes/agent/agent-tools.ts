@@ -41,7 +41,8 @@ export function createAgentTools(executor: ToolExecutor) {
       inputSchema: z.object({
         path: z.string(),
       }),
-      execute: async ({ path: p }) => executor.deleteFile(p),
+      execute: async ({ path: p }, options) =>
+       executor.deleteFile(p, options.toolCallId),
     }),
 
     create_folder: tool({
@@ -50,7 +51,8 @@ export function createAgentTools(executor: ToolExecutor) {
       inputSchema: z.object({
         path: z.string().describe("Relative directory path"),
       }),
-      execute: async ({ path: p }) => executor.createFolder(p),
+      execute: async ({ path: p }, options) =>
+       executor.createFolder(p, options.toolCallId),
     }),
 
     list_files: tool({
@@ -59,8 +61,8 @@ export function createAgentTools(executor: ToolExecutor) {
         path: z.string(),
         recursive: z.boolean().optional().default(false),
       }),
-      execute: async ({ path: p, recursive }) =>
-        executor.listFiles(p, recursive),
+     execute: async ({ path: p, recursive }, options) =>
+     executor.listFiles(p, recursive, options.toolCallId),
     }),
 
     search_files: tool({
@@ -73,8 +75,13 @@ export function createAgentTools(executor: ToolExecutor) {
           .describe("Glob-like pattern using * and ** (forward slashes)"),
         content_contains: z.string().optional(),
       }),
-      execute: async ({ root, pattern, content_contains }) =>
-        executor.searchFiles(root, pattern, content_contains),
+     execute: async ({ root, pattern, content_contains }, options) =>
+        executor.searchFiles(
+          root,
+          pattern,
+          content_contains,
+          options.toolCallId,
+        ),
     }),
 
     analyze_codebase: tool({
@@ -83,7 +90,8 @@ export function createAgentTools(executor: ToolExecutor) {
       inputSchema: z.object({
         path: z.string().default("."),
       }),
-      execute: async ({ path: p }) => executor.analyzeCodebase(p),
+      execute: async ({ path: p }, options) =>
+       executor.analyzeCodebase(p, options.toolCallId),
     }),
 
     execute_shell: tool({
@@ -100,7 +108,8 @@ export function createAgentTools(executor: ToolExecutor) {
       description:
         "List absolute paths to SKILL.md files under configured skill directories (Cursor / Claude).",
       inputSchema: z.object({}),
-      execute: async () => executor.listSkills(),
+     execute: async (_, options) =>
+      executor.listSkills(options.toolCallId),
     }),
 
     read_skill: tool({
@@ -109,7 +118,8 @@ export function createAgentTools(executor: ToolExecutor) {
       inputSchema: z.object({
         path: z.string(),
       }),
-      execute: async ({ path: p }) => executor.readSkill(p),
+     execute: async ({ path: p }, options) =>
+       executor.readSkill(p, options.toolCallId),
     }),
   };
 }

@@ -10,6 +10,7 @@
   "license": "ISC",
   "description": "",
   "dependencies": {
+    "@ai-sdk/openai": "^4.0.91",
     "@clack/core": "^1.5.1",
     "@clack/prompts": "^1.8.1",
     "@mendable/firecrawl-js": "^4.41.0",

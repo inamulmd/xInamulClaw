@@ -144,40 +144,57 @@ export class ToolExecutor {
     return `Staged update: ${key}`;
   }
 
-  deleteFile(rel: string): string {
+  deleteFile(rel: string,toolCallId: string,): string {
     if (!this.config.tools.allowFileModification)
       throw new Error("File deletion disabled");
+
     this.assertNotExcluded(rel, "delete_file");
+
     const before = this.getEffectiveText(rel);
+
     if (before === undefined)
       throw new Error(`delete_file: file not found: ${rel}`);
+
     const key = this.norm(rel);
+
     this.overlay.delete(key);
     this.deleted.add(key);
+
     this.tracker.log({
       type: "file_delete",
       path: key,
-      details: { before },
+      details: {
+        before,
+        toolCallId,
+      },
       status: "pending",
     });
+
     return `Staged delete: ${key}`;
   }
 
-  createFolder(rel: string): string {
+  createFolder(rel: string, toolCallId: string): string {
     if (!this.config.tools.allowFolderCreation)
       throw new Error("Folder creation disabled");
+
     this.assertNotExcluded(rel, "create_folder");
+
     const key = this.norm(rel);
+
     this.tracker.log({
       type: "folder_create",
       path: key,
-      details: { after: key },
+      details: {
+        after: key,
+        toolCallId,
+      },
       status: "pending",
     });
-    return `Staged folder: ${key}`;
-  }
 
-  listFiles(rel: string, recursive: boolean): string {
+    return `Staged folder: ${key}`;
+}
+
+  listFiles(rel: string,recursive: boolean, toolCallId: string,): string {
     this.assertNotExcluded(rel, "list_files");
     const abs = this.resolveSafe(rel);
     if (!fs.existsSync(abs)) throw new Error(`list_files: not found: ${rel}`);
@@ -205,17 +222,18 @@ export class ToolExecutor {
     this.tracker.log({
       type: "code_analysis",
       path: this.norm(rel),
-      details: { after: out, toolName: "list_files" },
+      details: { after: out, toolName: "list_files", toolCallId, },
       status: "executed",
     });
     return out || "(empty)";
   }
 
-  searchFiles(
-    rootRel: string,
-    globPattern: string,
-    contentQuery?: string,
-  ): string {
+searchFiles(
+  rootRel: string,
+  globPattern: string,
+  contentQuery: string | undefined,
+  toolCallId: string,
+): string {
     this.assertNotExcluded(rootRel, "search_files");
     const rootAbs = this.resolveSafe(rootRel);
     if (!fs.existsSync(rootAbs))
@@ -266,13 +284,17 @@ export class ToolExecutor {
     this.tracker.log({
       type: "code_analysis",
       path: this.norm(rootRel),
-      details: { after: out || "(no matches)", toolName: "search_files" },
+      details: {
+      after: out || "(no matches)",
+      toolName: "search_files",
+      toolCallId,
+      },
       status: "executed",
     });
     return out || "(no matches)";
   }
 
-  analyzeCodebase(rootRel: string): string {
+  analyzeCodebase(rootRel: string, toolCallId: string): string {
     const rootAbs = this.resolveSafe(rootRel);
     if (!fs.existsSync(rootAbs))
       throw new Error(`analyze_codebase: not found: ${rootRel}`);
@@ -299,7 +321,11 @@ export class ToolExecutor {
     this.tracker.log({
       type: "code_analysis",
       path: this.norm(rootRel),
-      details: { after: summary, toolName: "analyze_codebase" },
+      details: {
+        after: summary,
+        toolName: "analyze_codebase",
+        toolCallId,
+      },
       status: "executed",
     });
     return summary;
@@ -340,7 +366,7 @@ export class ToolExecutor {
     ];
   }
 
-  listSkills(): string {
+  listSkills(toolCallId: string): string {
     const lines: string[] = [];
     for (const root of this.skillRoots()) {
       if (!fs.existsSync(root)) continue;
@@ -357,13 +383,17 @@ export class ToolExecutor {
     this.tracker.log({
       type: "code_analysis",
       path: "skills",
-      details: { after: out || "(none)", toolName: "list_skills" },
+      details: {
+        after: out || "(none)",
+        toolName: "list_skills",
+        toolCallId,
+      },
       status: "executed",
     });
     return out || "(none)";
   }
 
-  readSkill(skillPath: string): string {
+  readSkill(skillPath: string, toolCallId: string): string {
     const abs = path.isAbsolute(skillPath)
       ? path.normalize(skillPath)
       : path.normalize(path.resolve(this.config.codebasePath, skillPath));
@@ -376,7 +406,11 @@ export class ToolExecutor {
     this.tracker.log({
       type: "code_analysis",
       path: abs,
-      details: { after: text, toolName: "read_skill" },
+      details: {
+          after: text,
+          toolName: "read_skill",
+          toolCallId,
+        },
       status: "executed",
     });
     return text;
