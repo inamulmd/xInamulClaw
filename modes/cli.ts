@@ -3,6 +3,8 @@ import type { ModelMessage, ToolModelMessage,JSONValue } from "ai";
 import { askAI, type Message } from "../ai/chat.js";
 import { runAgent,continueAgent  } from "./agent/agent.js";
 
+import { Planner } from "./planner/planner.js";
+
 
 
 
@@ -42,10 +44,71 @@ export async function startCLI() {
   intro("xInamulClaw CLI");
 
     const mode = await text({
-    message: "Choose your mode (chat/agent)",
-    placeholder: "chat",
+    message: "Choose your mode (chat/agent/planner)",
+    placeholder: "plnner",
   });
 
+
+
+  if (mode === "planner") {
+    const goal = await text({
+      message: "What goal should the Planner complete?",
+      placeholder: "Create a TypeScript calculator project",
+    });
+
+    if (isCancel(goal) || typeof goal !== "string" || !goal.trim()) {
+      outro("Planner cancelled.");
+      return;
+    }
+
+    const planner = new Planner();
+
+    try {
+      const plan = await planner.createPlan(goal.trim());
+
+      console.log("\nGenerated plan:");
+      console.log(`Goal: ${plan.goal}`);
+
+      for (const step of plan.steps) {
+        console.log(`\n${step.id}: ${step.description}`);
+        console.log(
+          `Dependencies: ${step.dependencies.join(", ") || "None"}`,
+        );
+      }
+
+      const approved = await confirm({
+        message: "Approve this plan and begin execution?",
+      });
+
+      if (isCancel(approved) || !approved) {
+        outro("Plan cancelled. No steps executed.");
+        return;
+      }
+
+      const completedPlan = await planner.runPlan(plan.id);
+
+      console.log("\nPlanner execution results:");
+
+      for (const step of completedPlan.steps) {
+        console.log(`${step.id}: ${step.status}`);
+
+        if (step.error) {
+          console.log(`Error: ${step.error}`);
+        }
+      }
+
+      outro(`Planner finished with status: ${completedPlan.status}`);
+    } catch (error) {
+      console.error(
+        "Planner failed:",
+        error instanceof Error ? error.message : String(error),
+      );
+    }
+
+    return;
+  }
+
+  
   if (mode === "agent") {
     const prompt = await text({
       message: "What should the agent do?",
