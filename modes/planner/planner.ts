@@ -21,6 +21,16 @@ export class Planner {
     );
   }
 
+
+  createPlanFromSteps(
+    goal: string,
+    steps: Omit<PlanStep, "status">[],
+  ): Plan {
+    return this.manager.createPlan(goal, steps);
+  }
+
+
+
   getPlan(planId: string): Plan | undefined {
     return this.manager.getPlan(planId);
   }
@@ -29,13 +39,28 @@ export class Planner {
     return this.manager.getPlans();
   }
 
+   
+
+
+
    async runPlan(planId: string): Promise<Plan> {
-   return this.executePlan(planId, executePlannerStep);
+    const plan = this.manager.getPlan(planId);
+
+    if (!plan) {
+      throw new Error(`Plan not found: ${planId}`);
+    }
+
+      return this.executePlan(
+      planId,
+      (step, completedSteps) =>
+        executePlannerStep(step, plan.goal, completedSteps),
+    );
   }
 
   async executePlan(
     planId: string,
-    executeStep: (step: PlanStep) => Promise<string>,
+    executeStep: ( step: PlanStep,
+    completedSteps: PlanStep[],) => Promise<string>,
   ): Promise<Plan> {
     const initialPlan = this.manager.getPlan(planId);
 
@@ -76,7 +101,13 @@ export class Planner {
         this.manager.updateStepStatus(planId, step.id, "in_progress");
 
         try {
-          const result = await executeStep(step);
+
+          const completedSteps = this.manager
+          .getPlan(planId)!
+          .steps.filter((item) => item.status === "completed");
+
+          const result = await executeStep(step, completedSteps);
+         
 
           this.manager.updateStepStatus(
             planId,
