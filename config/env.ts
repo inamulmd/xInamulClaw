@@ -10,5 +10,5 @@ if (!apiKey) {
 
 export const env = {
   openRouterApiKey: apiKey,
+  telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
 };
-
