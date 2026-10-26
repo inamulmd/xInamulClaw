@@ -1,3 +1,5 @@
+import path from "node:path";
+
 export type ActionType =
   | "file_create"
   | "file_modify"
@@ -42,8 +44,8 @@ export interface AgentConfig {
   };
 }
 
-export const defaultAgentConfig = (): AgentConfig => ({
-  codebasePath: process.cwd(),
+export const defaultAgentConfig = ( workspacePath: string = process.cwd(),): AgentConfig => ({
+  codebasePath: path.resolve(workspacePath),
   maxFileSizeToRead: 1024 * 1024,
   excludePatterns: [
     "node_modules",

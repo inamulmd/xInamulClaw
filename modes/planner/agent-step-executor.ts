@@ -126,6 +126,7 @@ export async function executePlannerStep(
   planGoal: string,
   completedSteps: PlanStep[],
   approvalHandler?: (actions: ActionLog[]) => Promise<boolean>,
+  workspacePath: string = process.cwd(),
 ): Promise<string> {
   console.log(`\nExecuting step: ${step.description}`);
 
@@ -157,6 +158,7 @@ ${step.description}
 
 Complete only the current step. Use previous results when relevant.
 Follow every restriction in the original user goal.`,
+   workspacePath
   );
 
   const output: string[] = [];

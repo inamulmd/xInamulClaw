@@ -7,6 +7,8 @@ import { executePlannerStep } from "./agent-step-executor.js";
 
 import type { ActionLog } from "../agent/types.js";
 
+import path from "node:path";
+
 export class Planner {
   private manager = new PlanManager();
 
@@ -45,26 +47,31 @@ export class Planner {
 
 
 
-   async runPlan(
-      planId: string,
-     approvalHandler?: (actions: ActionLog[]) => Promise<boolean>,): Promise<Plan> {
-      const plan = this.manager.getPlan(planId);
+  async runPlan(
+    planId: string,
+    approvalHandler?: (actions: ActionLog[]) => Promise<boolean>,
+    workspacePath: string = process.cwd(),
+   ): Promise<Plan> {
+    const plan = this.manager.getPlan(planId);
 
-      if (!plan) {
-        throw new Error(`Plan not found: ${planId}`);
-      }
+    if (!plan) {
+      throw new Error(`Plan not found: ${planId}`);
+    }
 
-      return this.executePlan(
-        planId,
-        (step, completedSteps) =>
-          executePlannerStep(
-            step,
-            plan.goal,
-            completedSteps,
-            approvalHandler,
-          ),
-      );
-}
+    const resolvedWorkspace = path.resolve(workspacePath);
+
+    return this.executePlan(
+      planId,
+      (step, completedSteps) =>
+        executePlannerStep(
+          step,
+          plan.goal,
+          completedSteps,
+          approvalHandler,
+          resolvedWorkspace,
+        ),
+    );
+  }
 
   async executePlan(
     planId: string,
