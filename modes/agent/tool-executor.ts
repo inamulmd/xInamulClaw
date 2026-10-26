@@ -336,6 +336,23 @@ searchFiles(
       throw new Error("Shell execution disabled");
     }
 
+   const interactiveAppCommand = command
+  .split(/&&|\|\||[;&|]/)
+  .some((part) =>
+    /^(?:start(?:\.exe)?\s+(?:"[^"]*"\s+)?)?(?:notepad(?:\.exe)?|write(?:\.exe)?|explorer(?:\.exe)?|code(?:\.cmd|\.exe)?|notepad\+\+)(?:\s|$)/i.test(
+      part.trim(),
+    ),
+  );
+
+  if (interactiveAppCommand) {
+    return JSON.stringify({
+      success: false,
+      blocked: true,
+      error:
+        "Launching interactive desktop applications is blocked. Use the Agent's file tools to read, create, or modify files instead.",
+    });
+  } 
+
     const action = this.tracker.log({
       type: "tool_execute",
       path: "shell",

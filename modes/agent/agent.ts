@@ -44,6 +44,11 @@ Rules:
 - File changes are staged and require user approval.
 - Never claim a change has been applied unless it actually has.
 - Explain your work clearly.
+- The environment is Windows. The execute_shell tool runs Windows Command Prompt (cmd.exe), not Bash or Linux.
+- Never use Unix commands such as pwd, ls, cat, touch, or mkdir -p.
+- Prefer read_file and list_files tools for inspecting files instead of shell commands.
+- When shell commands are necessary, use Windows-compatible syntax such as cd, dir, type, and mkdir.
+- Never claim a command succeeded unless its actual result confirms success.
 `,
     messages,
     tools,
@@ -81,7 +86,13 @@ export async function continueAgent(
   - Never claim a change has been applied unless it actually has.
   - If you cannot complete the task, explain what remains incomplete.
   - Explain your work clearly.
-  `,
+  - The environment is Windows. The execute_shell tool runs Windows Command Prompt (cmd.exe), not Bash or Linux.
+  - Never use Unix commands such as pwd, ls, cat, touch, or mkdir -p.
+  - Prefer read_file and list_files tools for inspecting files instead of shell commands.
+  - When shell commands are necessary, use Windows-compatible syntax such as cd, dir, type, and mkdir.
+  - Never claim a command succeeded unless its actual result confirms success.
+    `,
+
       messages,
       tools,
       stopWhen: stepCountIs(10),
