@@ -4,9 +4,12 @@ import { env } from "../config/env.js";
 import { Planner } from "./planner/planner.js";
 import type { ActionLog } from "./agent/types.js";
 
+import fs from "node:fs";
+import path from "node:path";
+
 const activePlans = new Map<
   string,
-  { planner: Planner; chatId: number; running: boolean }
+  { planner: Planner; chatId: number; running: boolean; workspacePath: string; }
 >();
 
 const pendingApprovals = new Map<
@@ -133,6 +136,8 @@ export async function startTelegramBot(): Promise<void> {
     await ctx.reply(`Your Telegram user ID is: ${ctx.from.id}`);
   });
 
+
+  ////Plan the workflow
   bot.command("plan", async (ctx) => {
     if (!isOwner(ctx.from?.id)) {
       await ctx.reply(
@@ -144,14 +149,56 @@ export async function startTelegramBot(): Promise<void> {
     const messageText =
       ctx.message && "text" in ctx.message ? ctx.message.text : "";
 
-    const goal = messageText
-      .replace(/^\/plan(?:@\w+)?\s*/i, "")
-      .trim();
+    const rawRequest = messageText
+    .replace(/^\/plan(?:@\w+)?\s*/i, "")
+    .trim();
+
+    const requestLines = rawRequest.split(/\r?\n/);
+    const workspaceLine = requestLines.find((line) =>
+      /^workspace\s*:/i.test(line),
+    );
+
+    const rawWorkspacePath = workspaceLine
+  ? workspaceLine.replace(/^workspace\s*:/i, "").trim()
+  : process.cwd();
+
+    if (!rawWorkspacePath) {
+      await ctx.reply("Please provide a workspace path.");
+      return;
+    }
+
+    if (workspaceLine && !path.isAbsolute(rawWorkspacePath)) {
+      await ctx.reply(
+        "Please provide an absolute workspace path, for example: E:\\Projects\\TaskFlow",
+      );
+      return;
+    }
+
+    const workspacePath = path.resolve(rawWorkspacePath);
+
+    if (
+      fs.existsSync(workspacePath) &&
+      !fs.statSync(workspacePath).isDirectory()
+    ) {
+      await ctx.reply("The workspace path exists but is not a directory.");
+      return;
+    }
+
+    const goalLines = workspaceLine
+      ? requestLines.filter((line) => line !== workspaceLine)
+      : requestLines;
+
+    const goal = goalLines.join("\n").trim();
 
     if (!goal) {
       await ctx.reply(
-        "Usage:\n/plan Read package.json and summarize its scripts",
+        "Usage:\n/plan Create a TypeScript project\nworkspace: E:\\Projects\\MyProject",
       );
+      return;
+    }
+
+    if (workspaceLine && !workspacePath) {
+      await ctx.reply("Please provide a valid workspace path.");
       return;
     }
 
@@ -165,6 +212,7 @@ export async function startTelegramBot(): Promise<void> {
         planner,
         chatId: ctx.chat.id,
         running: false,
+         workspacePath,
       });
 
       const stepsText = plan.steps
@@ -180,7 +228,8 @@ export async function startTelegramBot(): Promise<void> {
         statusMessage.message_id,
         undefined,
         (
-          `Goal: ${goal}\n\n` +
+         `Goal: ${goal}\n` +
+          `Workspace: ${workspacePath}\n\n` +
           `Generated plan:\n\n${stepsText}\n\n` +
           "Approve this plan to begin execution."
         ).slice(0, 3900),
@@ -210,6 +259,8 @@ export async function startTelegramBot(): Promise<void> {
     }
   });
 
+
+  // decide the workflow o be executed
   bot.action(/^plan:(approve|reject):(plan_\d+)$/, async (ctx) => {
     if (!isOwner(ctx.from?.id)) {
       await ctx.answerCbQuery("Access denied.");
@@ -256,10 +307,25 @@ export async function startTelegramBot(): Promise<void> {
     // Run execution without blocking Telegram's callback handler.
     void (async () => {
       try {
+        if (fs.existsSync(entry.workspacePath)) {
+          if (!fs.statSync(entry.workspacePath).isDirectory()) {
+            throw new Error(
+              `Workspace path is not a directory: ${entry.workspacePath}`,
+            );
+          }
+          } else {
+            fs.mkdirSync(entry.workspacePath, { recursive: true });
+          }
+
+          console.log(
+          `[Telegram Planner] Workspace: ${entry.workspacePath}`,
+        );
+
         const completedPlan = await entry.planner.runPlan(
           planId,
           (actions) =>
             requestActionApproval(bot, entry.chatId, actions),
+            entry.workspacePath,
         );
 
        console.log(

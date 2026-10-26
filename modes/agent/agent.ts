@@ -15,7 +15,8 @@ import { defaultAgentConfig } from "./types.js";
 // defaultAgentConfig: Provides the default workspace and permissions.
 
 
-export async function runAgent(prompt: string) {
+export async function runAgent( prompt: string,
+  workspacePath: string = process.cwd(),) {
   const tracker = new ActionTracker();
 
    const messages: ModelMessage[] = [
@@ -24,7 +25,7 @@ export async function runAgent(prompt: string) {
       content: prompt,
     },
   ];
-  const config = defaultAgentConfig();
+  const config =  defaultAgentConfig(workspacePath);
   const executor = new ToolExecutor(tracker, config);
   const tools = createAgentTools(executor);
 
