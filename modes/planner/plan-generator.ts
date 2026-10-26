@@ -38,13 +38,18 @@ Create a practical, ordered plan for this goal:
 ${normalizedGoal}
 
 Rules:
-- Produce between 1 and 12 actionable steps.
-- Each step must describe one clear task.
+- Produce the smallest practical plan that fully achieves the user's goal.
+- For simple read-only tasks, prefer a single step.
+- Usually use 2–5 steps for ordinary tasks; use more only when genuinely necessary.
+- Do not create separate steps just to locate, open, parse, extract, format, or review the same file unless those are genuinely separate tasks.
+- Each step must perform meaningful work and produce a useful result.
+- Describe each step as one clear, actionable task.
 - Give every step a unique ID.
-- Use dependencies only when a step genuinely requires another step first.
+- Dependencies must represent real prerequisites.
+- Never schedule a final review or summary before the work it depends on.
 - Every dependency must reference an existing step ID.
-- Do not execute commands or claim any work has been completed.
-- Keep the plan focused on the user's goal.
+- Do not execute commands or claim any work has been completed while generating the plan.
+- Respect all restrictions in the user's goal.
 `,
   });
 
@@ -74,16 +79,26 @@ Rules:
     };
   });
 
-  const normalizedPlan = {
-    ...object,
-    steps: steps.map((step, index) => ({
-      ...step,
-      dependencies: step.dependencies.map(
-        (dependency) => originalToNormalized.get(dependency) ?? dependency,
-      ),
-    })),
-  };
 
+    const normalizedPlan = {
+      ...object,
+      steps: steps.map((step, index) => {
+        const dependencies = step.dependencies.map(
+          (dependency) => originalToNormalized.get(dependency) ?? dependency,
+        );
+
+        const previousStep = steps[index - 1];
+
+        if (previousStep && !dependencies.includes(previousStep.id)) {
+          dependencies.push(previousStep.id);
+        }
+
+        return {
+          ...step,
+          dependencies,
+        };
+      }),
+    };
   const validIds = new Set(normalizedPlan.steps.map((step) => step.id));
 
   for (const step of normalizedPlan.steps) {
