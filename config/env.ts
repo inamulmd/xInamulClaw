@@ -11,4 +11,5 @@ if (!apiKey) {
 export const env = {
   openRouterApiKey: apiKey,
   telegramBotToken: process.env.TELEGRAM_BOT_TOKEN,
+  telegramAllowedUserId: process.env.TELEGRAM_ALLOWED_USER_ID,
 };

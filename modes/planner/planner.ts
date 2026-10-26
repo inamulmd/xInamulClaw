@@ -5,6 +5,8 @@ import type { Plan, PlanStep } from "./types.js";
 
 import { executePlannerStep } from "./agent-step-executor.js";
 
+import type { ActionLog } from "../agent/types.js";
+
 export class Planner {
   private manager = new PlanManager();
 
@@ -43,19 +45,26 @@ export class Planner {
 
 
 
-   async runPlan(planId: string): Promise<Plan> {
-    const plan = this.manager.getPlan(planId);
+   async runPlan(
+      planId: string,
+     approvalHandler?: (actions: ActionLog[]) => Promise<boolean>,): Promise<Plan> {
+      const plan = this.manager.getPlan(planId);
 
-    if (!plan) {
-      throw new Error(`Plan not found: ${planId}`);
-    }
+      if (!plan) {
+        throw new Error(`Plan not found: ${planId}`);
+      }
 
       return this.executePlan(
-      planId,
-      (step, completedSteps) =>
-        executePlannerStep(step, plan.goal, completedSteps),
-    );
-  }
+        planId,
+        (step, completedSteps) =>
+          executePlannerStep(
+            step,
+            plan.goal,
+            completedSteps,
+            approvalHandler,
+          ),
+      );
+}
 
   async executePlan(
     planId: string,

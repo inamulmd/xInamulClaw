@@ -1,5 +1,6 @@
 import { select } from "@clack/prompts";
 import { startCLI } from "../modes/cli.js";
+import { startTelegramBot } from "../modes/telegram.js";
 
 export async function runWakeup () {
   console.log("\n🚀 xInamulClaw is waking up...\n");
@@ -27,7 +28,7 @@ export async function runWakeup () {
   }
 
   if (mode === "telegram") {
-    console.log("Telegram mode coming soon...");
+    await startTelegramBot();
   }
 
   if (mode === "exit") {

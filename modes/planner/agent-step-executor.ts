@@ -125,6 +125,7 @@ export async function executePlannerStep(
   step: PlanStep,
   planGoal: string,
   completedSteps: PlanStep[],
+  approvalHandler?: (actions: ActionLog[]) => Promise<boolean>,
 ): Promise<string> {
   console.log(`\nExecuting step: ${step.description}`);
 
@@ -194,7 +195,7 @@ Follow every restriction in the original user goal.`,
     const pendingActions = tracker.getPendingMutations();
 
 const requestedCreateMatch = planGoal.match(
-  /\bcreate\s+(?:a\s+)?file\s+(?:named|called)\s+[`'"]?([^\s`'"]+)/i,
+  /\bfile\s+(?:named|called)\s+[`'"]?([^\s`'"]+)/i,
 );
 
 
@@ -260,9 +261,11 @@ if (
       }
     }
 
-    const approved = await confirm({
-      message: "Approve these actions for this Planner step?",
-    });
+    const approved = approvalHandler
+      ? await approvalHandler(pendingActions)
+      : await confirm({
+          message: "Approve these actions for this Planner step?",
+      });
 
     if (isCancel(approved) || !approved) {
       for (const action of pendingActions) {
