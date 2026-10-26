@@ -1,17 +1,49 @@
 # xInamulClaw
 
-A local TypeScript AI coding assistant with CLI and Telegram interfaces. It uses OpenRouter for model access, an Agent with file/shell tools, and a Planner that breaks a goal into dependent steps and executes them with approval for staged changes.
+### Turn instructions into working code with your own AI coding agent.
 
-> **Status:** Early MVP / active development. Core flows have been exercised locally, but this is not a production-hardened or sandboxed code-execution service.
+xInamulClaw is a local AI coding assistant that helps you create
+new projects, understand existing codebases, and perform coding tasks
+using natural-language instructions.
 
-## Features
+Instead of manually performing every step, describe your goal.
+xInamulClaw uses an AI Agent to work with project files and a Planner
+to break larger tasks into ordered steps. You can review the plan,
+approve proposed changes, and follow execution through either the CLI
+or Telegram.
 
-- **CLI modes:** chat, agent, and planner.
-- **Planner:** generates a multi-step plan from a natural-language goal and tracks step dependencies and status.
-- **Agent tools:** inspect files and directories and stage file/folder changes.
-- **Approvals:** staged file changes and shell commands require approval before they are applied or run.
-- **Telegram bot:** submit goals with `/plan`, approve or reject the overall plan, and approve or reject staged actions with inline buttons.
-- **Separate workspaces:** choose a directory for a plan so project files can be created outside the xInamulClaw repository.
+## What can you do with it?
+
+- **Create new projects:** Build a project in a separate workspace
+  without keeping its files inside the xInamulClaw repository.
+- **Understand existing code:** Read files, inspect project structure,
+  and summarize configuration or code.
+- **Automate multi-step tasks:** Turn a goal into a plan with
+  dependencies and step-by-step execution.
+- **Review changes before applying them:** File changes are staged
+  for approval. Shell commands also require approval before execution.
+- **Control your workflow through Telegram:** Submit goals, approve
+  plans, and approve or reject proposed actions from your Telegram chat.
+- **See execution results:** Follow step statuses and errors in the
+  terminal and Telegram.
+
+## How it works
+
+1. **Describe your goal** in the CLI or send a `/plan` command in Telegram.
+2. **Review the generated plan** and approve it before execution starts.
+3. **Let the Agent work** through the plan, using the available file
+   and shell tools.
+4. **Approve or reject proposed actions** when prompted.
+5. **Review the result** and see which steps completed or failed.
+
+## Example
+
+Create a new project outside the xInamulClaw repository by sending
+a goal with a workspace path:
+
+
+/plan Create a TypeScript calculator project
+workspace: E:\Projects\Calculator
 
 ## Requirements
 
